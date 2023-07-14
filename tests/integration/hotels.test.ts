@@ -49,6 +49,20 @@ beforeAll(async () => {
         expect(response.status).toBe(httpStatus.UNAUTHORIZED);
       });
       describe('when token is valid', () => {
+        it('should respond with status 404 if enrollment no exists', async () => {
+          const token = await generateValidToken();
+          const hotel = await createHotel();
+          const response = await server.get(`/hotels`).set('Authorization', `Bearer ${token}`);
+          expect(response.status).toBe(httpStatus.NOT_FOUND);
+        });
+        it('should respond with status 404 if ticket no exists', async () => {
+          const user = await createUser();
+          const token = await generateValidToken(user);
+          await createEnrollmentWithAddress(user);
+          const hotel = await createHotel();
+          const response = await server.get(`/hotels`).set('Authorization', `Bearer ${token}`);
+          expect(response.status).toBe(httpStatus.NOT_FOUND);
+        });
         it('must respond with status 402 if the ticket has not been paid', async () => {
           const user = await createUser();
           const token = await generateValidToken(user);
@@ -219,7 +233,7 @@ describe('GET /hotels/id', () => {
                 const hotel = await createHotel();
                 const response = await server.get(`/hotels/${hotel.id}`).set('Authorization', `Bearer ${token}`);
                 expect(response.status).toBe(httpStatus.OK);
-                console.log(response.body)
+                
               });
     });
 });

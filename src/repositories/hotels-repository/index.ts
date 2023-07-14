@@ -7,11 +7,13 @@ async function findHotels(userId:number) {
       userId: userId
     }
   })
+  if(!enrollment) throw notFoundError();
   const ticket = await prisma.ticket.findFirst({
     where: {
       enrollmentId: enrollment.id
     }
   }) 
+  if(!ticket) throw notFoundError();
   const ticketType = await prisma.ticketType.findFirst({
     where: {
       id: ticket.ticketTypeId
