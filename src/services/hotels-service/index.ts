@@ -1,8 +1,8 @@
 import { notFoundError } from "@/errors";
 import hotelsRepository from "@/repositories/hotels-repository";
 
-async function getHotels() {
-    const hotels = await hotelsRepository.findHotels();
+async function getHotels(userId:number) {
+    const hotels = await hotelsRepository.findHotels(userId);
     if(hotels.length === 0){
         throw notFoundError();
     }

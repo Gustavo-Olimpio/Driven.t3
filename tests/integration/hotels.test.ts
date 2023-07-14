@@ -49,20 +49,68 @@ beforeAll(async () => {
         expect(response.status).toBe(httpStatus.UNAUTHORIZED);
       });
       describe('when token is valid', () => {
-        it('should respond with status 404 if search result is empty', async () => {
-          const token = await generateValidToken();
-    
-          const response = await server.get('/hotels').set('Authorization', `Bearer ${token}`);
-            
-          expect(response.status).toEqual(httpStatus.NOT_FOUND);
+        it('must respond with status 402 if the ticket has not been paid', async () => {
+          const user = await createUser();
+          const token = await generateValidToken(user);
+          const enrollment = await createEnrollmentWithAddress(user);
+          const ticketType = await createTicketType();
+          const ticket = await createTicket(enrollment.id,ticketType.id,"RESERVED");
+          const hotel = await createHotel();
+          const response = await server.get(`/hotels`).set('Authorization', `Bearer ${token}`);
+          expect(response.status).toBe(httpStatus.PAYMENT_REQUIRED);
         });
-        it('should respond with status 200 if search result exists', async () => {
-            await createHotel();
-            const token = await generateValidToken();
-      
-            const response = await server.get('/hotels').set('Authorization', `Bearer ${token}`);
-            expect(response.status).toEqual(httpStatus.OK);
+        it('should respond with status 402 if ticketType is remote', async () => {
+          const user = await createUser();
+          const token = await generateValidToken(user);
+          const enrollment = await createEnrollmentWithAddress(user);
+          const ticketType = await prisma.ticketType.create({
+              data:{
+                  name:"Qualquer",
+                  price:123,
+                  isRemote:true,
+                  includesHotel:true
+              }
           });
+          const ticket = await createTicket(enrollment.id,ticketType.id,"PAID");
+          const hotel = await createHotel();
+          const response = await server.get(`/hotels`).set('Authorization', `Bearer ${token}`);
+          expect(response.status).toBe(httpStatus.PAYMENT_REQUIRED);
+        });
+        it('must respond with status 402 if ticketType does not include hotel', async () => {
+          const user = await createUser();
+          const token = await generateValidToken(user);
+          const enrollment = await createEnrollmentWithAddress(user);
+          const ticketType = await prisma.ticketType.create({
+              data:{
+                  name:"Qualquer",
+                  price:123,
+                  isRemote:false,
+                  includesHotel:false
+              }
+          });
+          const ticket = await createTicket(enrollment.id,ticketType.id,"PAID");
+          const hotel = await createHotel();
+          const response = await server.get(`/hotels`).set('Authorization', `Bearer ${token}`);
+          expect(response.status).toBe(httpStatus.PAYMENT_REQUIRED);
+        });
+        it('must respond with status 200 if all is correct', async () => {
+          const user = await createUser();
+          const token = await generateValidToken(user);
+          const enrollment = await createEnrollmentWithAddress(user);
+          const ticketType = await prisma.ticketType.create({
+              data:{
+                  name:"Qualquer",
+                  price:123,
+                  isRemote:false,
+                  includesHotel:true
+              }
+          });
+          const ticket = await createTicket(enrollment.id,ticketType.id,"PAID");
+          const hotel = await createHotel();
+          const response = await server.get(`/hotels`).set('Authorization', `Bearer ${token}`);
+          expect(response.status).toBe(httpStatus.OK);
+          
+        });
     });
 });
 describe('GET /hotels/id', () => {
@@ -171,6 +219,7 @@ describe('GET /hotels/id', () => {
                 const hotel = await createHotel();
                 const response = await server.get(`/hotels/${hotel.id}`).set('Authorization', `Bearer ${token}`);
                 expect(response.status).toBe(httpStatus.OK);
+                console.log(response.body)
               });
     });
 });
